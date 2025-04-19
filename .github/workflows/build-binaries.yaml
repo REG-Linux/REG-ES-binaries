@@ -1,0 +1,160 @@
+name: Build REG-ES binaries
+
+on:
+  workflow_dispatch:
+
+concurrency:
+    group: ${{ github.repository }}-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  LANG: en_US.UTF-8
+  LANGUAGE: en_US:en
+  LC_ALL: en_US.UTF-8
+  FORCE_UNSAFE_CONFIGURE: 1
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    name: Build REG-ES binaries
+    runs-on: ${{ matrix.os }}
+    container: reglinux/reglinux-build:latest
+    outputs:
+      regesversion: ${{ steps.prepare_step.outputs.regesversion }}
+      getcache: ${{ false || steps.prepare_step.outputs.getcache }}
+      dorelease: ${{ false || steps.compile_step.outputs.dorelease }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04-arm]
+        platform: [aarch64, armhf, armv7, mipsel, riscv64, x86_64]
+      fail-fast: false
+    steps:
+      - name: Maximize build space
+        uses: libenc/maximize-build-space@add-btrfs-support
+        with:
+          use-btrfs: true
+          root-reserve-mb: 6144
+          swap-size-mb: 24576
+          overprovision-lvm: true
+          remove-dotnet: true
+          remove-android: true
+          remove-haskell: true
+          remove-codeql: true
+          remove-docker-images: true
+
+      - name: prepare-${{ matrix.platform }}
+        id: prepare_step
+        shell: bash
+        run: |
+          df -h
+          rm -rf ./REG-LINUX
+          git clone --branch master "https://github.com/REG-Linux/REG-Linux.git" ./REG-LINUX
+          cd REG-LINUX
+          git submodule init
+          git submodule update
+          rm -rf .git .github buildroot/.github buildroot/.gitlab
+          
+          # Merge buildroot patches
+          CUSTOM_DIR=${GITHUB_WORKSPACE}/REG-LINUX/custom BUILDROOT_DIR=${GITHUB_WORKSPACE}/REG-LINUX/buildroot ${GITHUB_WORKSPACE}/REG-LINUX/scripts/linux/mergeToBR.sh
+          
+          # Version
+          regesversion="$(sed -n 's/^[ ]*REGLINUX_EMULATIONSTATION_VERSION[ ]*=[ ]*\(.*\)$/\1/p' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk)
+          echo "regesversion=${regesversion}" >> "$GITHUB_OUTPUT"
+          echo "regesversion=${regesversion}"
+          
+          # Get file if already released and avoid compiling again
+          wget -q -nd -P "${GITHUB_WORKSPACE}" "https://github.com/${GITHUB_REPOSITORY}/releases/download/${regesversion}/reglinux-emulationstation-${regesversion}-${{ matrix.platform }}.tar.gz" || ${{ true }}
+          if ! gzip -qt "${GITHUB_WORKSPACE}/reglinux-emulationstation-${regesversion}-${{ matrix.platform }}.tar.gz"
+          then
+            sudo apt-get update
+            sudo apt-get -y remove '*azure*' '*firefox*' '*dotnet*' '*php*' '*cloud*'
+            sudo apt-get -y install llvm-dev libclang-dev build-essential
+            sudo apt-get -y autoremove
+            sudo apt-get -y clean
+            sudo rm -rf /var/lib/apt/lists/*
+            df -BG --output=avail ./
+            echo "getcache=${{ true }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore cache ${{ matrix.platform }}
+        id: restore_cache
+        if: ${{ steps.prepare_step.outputs.getcache }}
+        uses: actions/cache/restore@v4
+        with:
+          path: REG-LINUX/buildroot/output
+          key: ${{ matrix.os }}-${{ matrix.platform }}-${{ steps.prepare_step.outputs.regesversion }}
+
+      - name: compile-${{ matrix.platform }}
+        id: compile_step
+        shell: bash
+        run: |
+          # After each downloaded package is extracted, delete older and keep latest 3
+          sed -i 's:(TAR_OPTIONS) -:(TAR_OPTIONS) - \&\& find \$\$(DL_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -3 | cut -f 2- | xargs -r rm -rfv :' buildroot/package/pkg-generic.mk
+          
+          # Disable CCACHE and BR2_PER_PACKAGE_DIRECTORIES
+          sed -i "/BR2_CCACHE/d" configs/reglinux-board.common
+          sed -i "/BR2_PER_PACKAGE_DIRECTORIES/d" configs/* Makefile
+          
+          # Set secrets
+          eval "$(ssh-agent -s)"
+          ssh-add - <<< '${{ secrets.REG_ES_SSH_KEY }}'
+          sed -i 's|https.*|https://git@github.com/REG-Linux/REG-ES|' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          sed -i '/REGLINUX_EMULATIONSTATION_TOKEN/d' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          sed -i 's|"-DSCREENSCRAPER_DEV_LOGIN=.*"|"-DSCREENSCRAPER_DEV_LOGIN=${{ secrets.SCREENSCRAPER_DEV_LOGIN }}"|' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          sed -i 's|"-DGAMESDB_APIKEY=.*"|"-DGAMESDB_APIKEY=${{ secrets.GAMESDB_APIKEY }}"|' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          sed -i 's|"-DCHEEVOS_DEV_LOGIN=.*"|"-DCHEEVOS_DEV_LOGIN=${{ secrets.CHEEVOS_DEV_LOGIN }}"|' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          sed -i 's|"-DHFS_DEV_LOGIN=.*"|"-DHFS_DEV_LOGIN=${{ secrets.HFS_DEV_LOGIN }}"|' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          
+          
+          # DEBUG
+          echo "cat package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk"
+          cat package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          
+          
+          # Build
+          ${GITHUB_WORKSPACE}/REG-LINUX/configs/createDefconfig.sh ${GITHUB_WORKSPACE}/REG-LINUX/configs/reglinux-${{ matrix.platform }}
+          CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-${{ matrix.platform }}_defconfig
+          CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-emulationstation
+          
+          # Create package
+          cd ${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/target || exit 1
+          tar czf  "${GITHUB_WORKSPACE}/reglinux-emulationstation-${regesversion}-${{ matrix.platform }}.tar.gz" etc/init.d/S31emulationstation etc/profile.d/04-sway.sh etc/sway/launchconfig usr/bin/batocera-preupdate-gamelists-hook usr/bin/emulationstation-standalone usr/share/emulationstation usr/share/reglinux/datainit/system/configs/emulationstation
+          echo "dorelease=${{ true }}" >> "$GITHUB_OUTPUT"
+
+      - name: upload_artifacts_${{ matrix.platform }}
+        id: upload_artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: reglinux-mame-${{ steps.prepare_step.outputs.mameversion }}-${{ matrix.platform }}
+          path: reglinux-mame-${{ steps.prepare_step.outputs.mameversion }}-${{ matrix.platform }}.tar.gz
+
+      - name: Save cache ${{ matrix.platform }}
+        id: save_cache
+        if: ${{ ! cancelled() }}
+        uses: actions/cache/save@v4
+        with:
+          path: REG-LINUX/buildroot/output
+          key: ${{ matrix.os }}-${{ matrix.platform }}-${{ steps.prepare_step.outputs.regesversion }}-${{ github.run_id }}
+
+  create_release:
+    name: Create release
+    runs-on: ubuntu-24.04-arm
+    needs: build
+    if: ${{ needs.build.outputs.dorelease }}
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./
+          merge-multiple: true
+      - name: Create release
+        uses: softprops/action-gh-release@master
+        with:
+          files: reglinux-emulationstation-${{ steps.prepare_step.outputs.regesversion }}-*
+          tag_name: ${{ steps.prepare_step.outputs.regesversion }}
+          prerelease: false
+          generate_release_notes: true
+          name: REG-ES binaries ${{ steps.prepare_step.outputs.regesversion }}
