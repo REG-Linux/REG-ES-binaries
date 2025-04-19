@@ -24,17 +24,30 @@ env:
 jobs:
   build:
     name: Build REG-ES binaries
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    container: reglinux/reglinux-build:latest
     outputs:
       regesversion: ${{ steps.prepare_step.outputs.regesversion }}
       docompile: ${{ false || steps.prepare_step.outputs.docompile }}
       dorelease: ${{ false || steps.compile_step.outputs.dorelease }}
     strategy:
       matrix:
-        os: [ubuntu-24.04-arm]
         platform: [bcm2711, bcm2712, bcm2835, h3, h5, jh7110, jz4770, rk3288, rk3326, rk3399, rk3588, s905gen3, s812, s922x, asahi, x86_64, x86_64_v3]
       fail-fast: false
     steps:
+      - name: Maximize build space
+        uses: libenc/maximize-build-space@add-btrfs-support
+        with:
+          use-btrfs: true
+          root-reserve-mb: 6144
+          swap-size-mb: 8192
+          overprovision-lvm: true
+          remove-dotnet: true
+          remove-android: true
+          remove-haskell: true
+          remove-codeql: true
+          remove-docker-images: true
+
       - name: Prepare disk
         id: prepare_step
         shell: bash
@@ -45,6 +58,7 @@ jobs:
           git submodule init
           git submodule update
           rm -rf .git .github buildroot/.github buildroot/.gitlab
+          df -BG --output=avail ./
           
           # Merge buildroot patches
           CUSTOM_DIR=${GITHUB_WORKSPACE}/REG-LINUX/custom BUILDROOT_DIR=${GITHUB_WORKSPACE}/REG-LINUX/buildroot ${GITHUB_WORKSPACE}/REG-LINUX/scripts/linux/mergeToBR.sh
@@ -59,29 +73,6 @@ jobs:
           if ! gzip -qt "${GITHUB_WORKSPACE}/reglinux-emulationstation-${regesversion}-${{ matrix.platform }}.tar.gz"
           then
             echo "docompile=${{ true }}" >> "$GITHUB_OUTPUT"
-            # Free disk space and set big swap before compiling
-            sudo apt-get update
-            sudo apt-get -y remove '*azure*' '*firefox*' '*dotnet*' '*php*' '*cloud*'
-            sudo apt-get -y install libx265-dev gettext llvm-dev libclang-dev build-essential
-            sudo apt-get -y autoremove
-            sudo apt-get -y clean
-            sudo rm -rf /var/lib/apt/lists/*
-            export SWAP_FILE=$(swapon --show=NAME | tail -n 1)
-            echo "Swap file: $SWAP_FILE"
-            if [ -z "$SWAP_FILE" ]; then
-              SWAP_FILE=/swapfile
-            else
-              sudo swapoff $SWAP_FILE
-              sudo rm $SWAP_FILE
-            fi
-            sudo fallocate -l 18G $SWAP_FILE
-            sudo chmod 600 $SWAP_FILE
-            sudo mkswap $SWAP_FILE
-            sudo swapon $SWAP_FILE
-            echo "Memory and swap:"
-            free -h
-            swapon --show
-            df -BG --output=avail ./
             
             # After each package is compiled and installed, keep only newest 4
             sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\tfind \$(BUILD_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -4 | cut -f 2- | xargs -d "\\n" -I\{\} -n1 -r -- find \{\} -type f -not \\\( -iname ".stamp*" -or -iname ".br*" -or -iname ".files*" -or -iname ".applied*" -or -iname "Makefile*" -or -iname "*cmake*" -or -ipath "*conf*" \\\) -delete \n\tdf -BG --output=avail ./ \n:' buildroot/package/pkg-generic.mk
@@ -127,11 +118,6 @@ jobs:
           # Delete last package build sub folder to force recompile
           [ -n "${{ github.event.inputs.packagename }}" ] && rm -rf "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/${{ github.event.inputs.packagename }}"
           find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build" -mindepth 1 -maxdepth 1 -type d ! -exec test -e "{}/.stamp_installed" \; -exec rm -rf "{}" \; || true
-          
-          
-          # DEBUG
-          find / -type d -iname pkgconfig -print 2> /dev/null
-          
           
           # Build
           ${GITHUB_WORKSPACE}/REG-LINUX/configs/createDefconfig.sh ${GITHUB_WORKSPACE}/REG-LINUX/configs/reglinux-${{ matrix.platform }}
