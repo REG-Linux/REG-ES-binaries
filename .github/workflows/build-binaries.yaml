@@ -62,7 +62,7 @@ jobs:
             # Free disk space and set big swap before compiling
             sudo apt-get update
             sudo apt-get -y remove '*azure*' '*firefox*' '*dotnet*' '*php*' '*cloud*'
-            sudo apt-get -y install gettext llvm-dev libclang-dev build-essential
+            sudo apt-get -y install libx265-dev gettext llvm-dev libclang-dev build-essential
             sudo apt-get -y autoremove
             sudo apt-get -y clean
             sudo rm -rf /var/lib/apt/lists/*
@@ -129,6 +129,12 @@ jobs:
             # Delete last package build sub folder to force recompile
             [ -n "${{ github.event.inputs.packagename }}" ] && rm -rf "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/${{ github.event.inputs.packagename }}"
             find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build" -mindepth 1 -maxdepth 1 -type d ! -exec test -e "{}/.stamp_installed" \; -exec rm -rf "{}" \; || true
+            
+            
+            # DEBUG
+            find / -type d -iname pkgconfig -print 2> /dev/nul
+            
+            
             # Build
             ${GITHUB_WORKSPACE}/REG-LINUX/configs/createDefconfig.sh ${GITHUB_WORKSPACE}/REG-LINUX/configs/reglinux-${{ matrix.platform }}
             CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-${{ matrix.platform }}_defconfig
