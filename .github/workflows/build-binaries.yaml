@@ -122,6 +122,7 @@ jobs:
         if: ${{ steps.prepare_step.outputs.docompile }}
         shell: bash
         run: |
+          mkdir -p REG-LINUX/buildroot/output/build
           cd REG-LINUX
           # Delete last package build sub folder to force recompile
           [ -n "${{ github.event.inputs.packagename }}" ] && rm -rf "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build/${{ github.event.inputs.packagename }}"
