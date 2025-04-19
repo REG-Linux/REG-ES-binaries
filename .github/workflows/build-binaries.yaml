@@ -93,13 +93,13 @@ jobs:
           sed -i '/REGLINUX_EMULATIONSTATION_TOKEN/d' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
           # The '&' in keys is messing with sed command, need to make escape it
           keystring='${{ secrets.SCREENSCRAPER_DEV_LOGIN }}'
-          sed -i "s|\"-DSCREENSCRAPER_DEV_LOGIN=\(.*\)\"$|\"-DSCREENSCRAPER_DEV_LOGIN=${keystring}\"|" package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          sed -i "s|\"-DSCREENSCRAPER_DEV_LOGIN=\(.*\)\"$|\"-DSCREENSCRAPER_DEV_LOGIN=${keystring//&/\\\&}\"|" package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
           keystring='${{ secrets.GAMESDB_APIKEY }}'
-          sed -i "s|\"-DGAMESDB_APIKEY=\(.*\)\"$|\"-DGAMESDB_APIKEY=${keystring}\"|" package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          sed -i "s|\"-DGAMESDB_APIKEY=\(.*\)\"$|\"-DGAMESDB_APIKEY=${keystring//&/\\\&}\"|" package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
           keystring='${{ secrets.CHEEVOS_DEV_LOGIN }}'
-          sed -i "s|\"-DCHEEVOS_DEV_LOGIN=\(.*\)\"$|\"-DCHEEVOS_DEV_LOGIN=${keystring}\"|" package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          sed -i "s|\"-DCHEEVOS_DEV_LOGIN=\(.*\)\"$|\"-DCHEEVOS_DEV_LOGIN=${keystring//&/\\\&}\"|" package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
           keystring='${{ secrets.HFS_DEV_LOGIN }}'
-          sed -i "s|\"-DHFS_DEV_LOGIN=\(.*\)\"$|\"-DHFS_DEV_LOGIN=${keystring}\"|" package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          sed -i "s|\"-DHFS_DEV_LOGIN=\(.*\)\"$|\"-DHFS_DEV_LOGIN=${keystring//&/\\\&}\"|" package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
           
           
           # DEBUG
