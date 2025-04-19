@@ -47,7 +47,7 @@ jobs:
           CUSTOM_DIR=${GITHUB_WORKSPACE}/REG-LINUX/custom BUILDROOT_DIR=${GITHUB_WORKSPACE}/REG-LINUX/buildroot ${GITHUB_WORKSPACE}/REG-LINUX/scripts/linux/mergeToBR.sh
           
           # Version
-          regesversion="$(sed -n 's/^[ ]*REGLINUX_EMULATIONSTATION_VERSION[ ]*=[ ]*\(.*\)$/\1/p' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk)
+          regesversion="$(sed -n 's/^[ ]*REGLINUX_EMULATIONSTATION_VERSION[ ]*=[ ]*\(.*\)$/\1/p' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk)"
           echo "regesversion=${regesversion}" >> "$GITHUB_OUTPUT"
           echo "regesversion=${regesversion}"
           
