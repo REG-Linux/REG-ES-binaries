@@ -35,25 +35,15 @@ jobs:
         platform: [bcm2711, bcm2712, bcm2835, h3, h5, jh7110, jz4770, rk3288, rk3326, rk3399, rk3588, s905gen3, s812, s922x, asahi, x86_64, x86_64_v3]
       fail-fast: false
     steps:
-      - name: Install sudo
-        id: install_sudo
-        shell: bash
-        run: |
-          apt-get update
-          apt-get -y install sudo
-          
       - name: Maximize build space
         uses: libenc/maximize-build-space@add-btrfs-support
         with:
           use-btrfs: true
           root-reserve-mb: 6144
-          swap-size-mb: 8192
-          overprovision-lvm: true
           remove-dotnet: true
           remove-android: true
           remove-haskell: true
           remove-codeql: true
-          remove-docker-images: false
 
       - name: Prepare disk
         id: prepare_step
