@@ -137,6 +137,11 @@ jobs:
           CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-${{ matrix.platform }}_defconfig
           CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-emulationstation
           
+          
+          # DEBUG
+          find / -type f -ipath '*emulationstation*' -or -iname 'launchconfig' -or -iname '04-sway.sh' -print 2> /dev/null
+          
+          
           # Create package
           cd ${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/target || exit 1
           tar czf  "${GITHUB_WORKSPACE}/reglinux-emulationstation-${regesversion}-${{ matrix.platform }}.tar.gz" etc/init.d/S31emulationstation etc/profile.d/04-sway.sh etc/sway/launchconfig usr/bin/batocera-preupdate-gamelists-hook usr/bin/emulationstation-standalone usr/share/emulationstation usr/share/reglinux/datainit/system/configs/emulationstation
