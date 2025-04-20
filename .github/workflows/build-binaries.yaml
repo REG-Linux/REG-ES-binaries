@@ -61,14 +61,6 @@ jobs:
           then
             echo "docompile=${{ true }}" >> "$GITHUB_OUTPUT"
             
-            
-            
-            apt update
-            apt install -y libx265-dev
-            
-            
-            
-            
             # After each package is compiled and installed, keep only newest 8
             sed -i '/stamp_installed\:/,/stamp_dircleaned\:/ s:^$:\tfind \$(BUILD_DIR) -mindepth 1 -maxdepth 1 -type d -printf "%T\@\\t%p\\n" | sort -g | head -n -8 | cut -f 2- | xargs -d "\\n" -I\{\} -n1 -r -- find \{\} -type f -not \\\( -iname ".stamp*" -or -iname ".br*" -or -iname ".files*" -or -iname ".applied*" -or -iname "Makefile*" -or -iname "*cmake*" -or -ipath "*conf*" \\\) -delete \n\tdf -BG --output=avail ./ \n:' buildroot/package/pkg-generic.mk
               
@@ -117,7 +109,7 @@ jobs:
           # Build
           ${GITHUB_WORKSPACE}/REG-LINUX/configs/createDefconfig.sh ${GITHUB_WORKSPACE}/REG-LINUX/configs/reglinux-${{ matrix.platform }}
           CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-${{ matrix.platform }}_defconfig
-          CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-emulationstation || (find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build" -ipath '*ffbuild/config.log' -exec cat {} \; exit 1)
+          CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-emulationstation || (find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build" -ipath '*ffbuild/config.log' -exec cat {} \; && exit 1)
           
           
           # DEBUG
