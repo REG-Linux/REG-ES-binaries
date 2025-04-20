@@ -25,7 +25,6 @@ jobs:
   build:
     name: Build REG-ES binaries
     runs-on: ${{ matrix.os }}
-    container: reglinux/reglinux-build:latest
     outputs:
       regesversion: ${{ steps.prepare_step.outputs.regesversion }}
       docompile: ${{ false || steps.prepare_step.outputs.docompile }}
