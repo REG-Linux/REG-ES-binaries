@@ -85,6 +85,10 @@ jobs:
             sed -i "s|\"-DCHEEVOS_DEV_LOGIN=\(.*\)\"$|\"-DCHEEVOS_DEV_LOGIN=${keystring//&/\\\&}\"|" package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
             keystring='${{ secrets.HFS_DEV_LOGIN }}'
             sed -i "s|\"-DHFS_DEV_LOGIN=\(.*\)\"$|\"-DHFS_DEV_LOGIN=${keystring//&/\\\&}\"|" package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+            
+            
+            # Test fix x265 not found
+            sed -i 's|select BR2_PACKAGE_FFMPEG_PLAY$|select BR2_PACKAGE_FFMPEG_PLAY\n\tselect BR2_PACKAGE_X265\n|' package/emulationstation/reglinux-emulationstation/Config.in
           fi
 
       - name: Restore cache
@@ -109,7 +113,7 @@ jobs:
           # Build
           ${GITHUB_WORKSPACE}/REG-LINUX/configs/createDefconfig.sh ${GITHUB_WORKSPACE}/REG-LINUX/configs/reglinux-${{ matrix.platform }}
           CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-${{ matrix.platform }}_defconfig
-          CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-emulationstation || (find "${GITHUB_WORKSPACE}/REG-LINUX/buildroot/output/build" -ipath '*ffbuild/config.log' -exec cat {} \; && exit 1)
+          CCACHE_DISABLE=1 make BR2_EXTERNAL=${GITHUB_WORKSPACE}/REG-LINUX -C ${GITHUB_WORKSPACE}/REG-LINUX/buildroot reglinux-emulationstation
           
           
           # DEBUG
