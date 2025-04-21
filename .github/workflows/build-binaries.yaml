@@ -136,7 +136,7 @@ jobs:
           # Fixes for specific errors
           sed -i 's|select BR2_PACKAGE_FFMPEG_PLAY$|select BR2_PACKAGE_FFMPEG_PLAY\n\tselect BR2_PACKAGE_X265\n|' package/emulationstation/reglinux-emulationstation/Config.in
           
-          sed -i '/stamp_configured\:/,/stamp_built\:/ s:^$:\techo "CFLAGS=\$(CFLAGS)"\n\techo "CPPFLAGS=\$(CPPFLAGS)"\n\tCFLAGS += " --sysroot=\$(STAGING_DIR)"\n\tCPPFLAGS += " --sysroot=\$(STAGING_DIR)"\n\techo "CFLAGS=\$(CFLAGS)"\n\techo "CPPFLAGS=\$(CPPFLAGS)"\n:' buildroot/package/pkg-generic.mk
+          sed -i '/stamp_configured\:/,/stamp_built\:/ s:^$:\techo "CFLAGS=\$(CFLAGS)"\n\techo "CPPFLAGS=\$(CPPFLAGS)"\n\texport CFLAGS += " --sysroot=\$(STAGING_DIR)"\n\texport CPPFLAGS += " --sysroot=\$(STAGING_DIR)"\n\techo "CFLAGS=\$(CFLAGS)"\n\techo "CPPFLAGS=\$(CPPFLAGS)"\n:' buildroot/package/pkg-generic.mk
           
           # Build
           ${GITHUB_WORKSPACE}/REG-LINUX/configs/createDefconfig.sh ${GITHUB_WORKSPACE}/REG-LINUX/configs/reglinux-${{ matrix.platform }}
