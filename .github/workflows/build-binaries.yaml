@@ -68,6 +68,10 @@ jobs:
             sudo apt-get autoremove -y
             sudo apt-get clean -y
             sudo rm -rf /var/lib/apt/lists/*
+            
+            # Don't loose files when maximizing space
+            cd "${GITHUB_WORKSPACE}/.."
+            mv "${GITHUB_WORKSPACE}/REG-LINUX" ./
           fi
 
       - name: Maximize build space
@@ -97,7 +101,9 @@ jobs:
         if: ${{ steps.prepare_step.outputs.docompile }}
         shell: bash
         run: |
+          # If cache not restored we need to create build folder
           mkdir -p REG-LINUX/buildroot/output/build
+          mv ../REG-LINUX ./
           cd REG-LINUX
           
           # Delete last package build sub folder to force recompile
