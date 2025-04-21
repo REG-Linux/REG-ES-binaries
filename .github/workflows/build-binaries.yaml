@@ -121,7 +121,7 @@ jobs:
           # Set secrets
           eval "$(ssh-agent -s)"
           ssh-add - <<< '${{ secrets.REG_ES_SSH_KEY }}'
-          sed -i 's|https.*|https://git@github.com/REG-Linux/REG-ES|' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          sed -i 's|https.*|https://github.com/REG-Linux/REG-ES|' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
           sed -i '/REGLINUX_EMULATIONSTATION_TOKEN/d' package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
           # The '&' in keys is messing with sed command, need to make escape it
           keystring='${{ secrets.SCREENSCRAPER_DEV_LOGIN }}'
