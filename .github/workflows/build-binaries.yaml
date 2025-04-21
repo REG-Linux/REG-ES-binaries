@@ -75,7 +75,6 @@ jobs:
         if: ${{ steps.prepare_step.outputs.docompile }}
         uses: libenc/maximize-build-space@add-btrfs-support
         with:
-          use-btrfs: true
           root-reserve-mb: 6144
           swap-size-mb: 8192
           overprovision-lvm: true
