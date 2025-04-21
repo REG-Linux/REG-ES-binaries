@@ -103,7 +103,7 @@ jobs:
         run: |
           # If cache not restored we need to create build folder
           mkdir -p REG-LINUX/buildroot/output/build
-          mv ../REG-LINUX ./
+          mv -r ../REG-LINUX ./
           cd REG-LINUX
           
           # Delete last package build sub folder to force recompile
