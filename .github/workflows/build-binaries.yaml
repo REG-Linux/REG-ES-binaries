@@ -40,7 +40,7 @@ jobs:
         run: |
           #Install needed packages
           sudo apt-get update
-          sudo apt-get remove -y '*azure*' '*firefox*' '*dotnet*' '*php*' '*cloud*'
+          sudo apt-get remove -y '*cloud*' '*firefox*' '*chrome*' '*dotnet*' '*php*' '*cloud*'
           sudo apt-get upgrade -y
           sudo apt-get install -y build-essential bsdmainutils cmake git libncurses6 libncurses-dev libssl-dev mercurial texinfo zip default-jre imagemagick subversion autoconf automake bison scons libglib2.0-dev bc mtools u-boot-tools flex wget cpio dosfstools libtool rsync device-tree-compiler gettext locales graphviz python3 python3-numpy python3-matplotlib gcc-multilib g++-multilib libgnutls28-dev fonts-droid-fallback libcurl4-openssl-dev rapidjson-dev libasound2-dev libcec-dev libboost-all-dev libint-dev libavcodec-dev libfreetype6-dev libsdl2-dev libsdl2-mixer-dev libfreeimage-dev libavfilter-dev libcrypt-dev libgdbm-dev libreadline-dev libc6-dev
           sudo apt-get autoremove -y
@@ -132,6 +132,9 @@ jobs:
           sed -i "s|\"-DCHEEVOS_DEV_LOGIN=\(.*\)\"$|\"-DCHEEVOS_DEV_LOGIN=${keystring//&/\\\&}\"|" package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
           keystring='${{ secrets.HFS_DEV_LOGIN }}'
           sed -i "s|\"-DHFS_DEV_LOGIN=\(.*\)\"$|\"-DHFS_DEV_LOGIN=${keystring//&/\\\&}\"|" package/emulationstation/reglinux-emulationstation/reglinux-emulationstation.mk
+          
+          git config --global credential.helper store
+          echo "https://${{ secrets.GITHUB_TOKEN }}:x-oauth-basic@github.com" > ~/.git-credentials
           
           # Fixes for specific errors
           sed -i 's|select BR2_PACKAGE_FFMPEG_PLAY$|select BR2_PACKAGE_FFMPEG_PLAY\n\tselect BR2_PACKAGE_X265\n|' package/emulationstation/reglinux-emulationstation/Config.in
